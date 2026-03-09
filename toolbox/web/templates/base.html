@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Toolbox{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+    <div class="app-layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo"><i class="fa-solid fa-toolbox"></i></span>
+                <span class="sidebar-title">Toolbox</span>
+                <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">
+                    <i class="fa-solid fa-angles-left" id="toggleIcon"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <i class="fa-solid fa-gauge-high nav-icon"></i>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a href="/settings" class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+                    <i class="fa-solid fa-gear nav-icon"></i>
+                    <span class="nav-label">Settings</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main content -->
+        <div class="main-wrapper">
+
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="breadcrumb">
+                    <i class="fa-solid fa-house"></i>
+                    {% block breadcrumb %}{% endblock %}
+                </div>
+                <div class="topbar-actions">
+                    <button class="icon-btn" id="themeToggle" title="Toggle theme">
+                        <i class="fa-solid fa-circle-half-stroke"></i>
+                    </button>
+                    <button class="icon-btn" id="helpBtn" title="Help">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </button>
+                    <button class="icon-btn" id="aboutBtn" title="About">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Page content -->
+            <main class="content">
+                {% block content %}{% endblock %}
+            </main>
+
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="helpModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-circle-question"></i> Help</h2>
+                <button class="modal-close" data-modal="helpModal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <h3>Quick Start</h3>
+                <p>Run <code>toolbox config init &lt;root&gt;</code> to scan and register your Git repositories.</p>
+                <h3>Commands</h3>
+                <ul>
+                    <li><code>config init &lt;root&gt;</code> — Scan a folder and register all Git repos</li>
+                    <li><code>config add &lt;path&gt;</code> — Add a new repo or folder</li>
+                    <li><code>switch --default</code> — Switch all repos to their default branch</li>
+                    <li><code>switch &lt;projects&gt; --branch &lt;branch&gt;</code> — Switch selected repos to a branch</li>
+                    <li><code>pull --all</code> — Pull all repos</li>
+                    <li><code>pull &lt;project&gt;</code> — Pull a specific repo</li>
+                </ul>
+                <p class="help-link">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    <a href="https://github.com/narra-antonio/toolbox" target="_blank">Full documentation on GitHub</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal-overlay" id="aboutModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-circle-info"></i> About</h2>
+                <button class="modal-close" data-modal="aboutModal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body about-body">
+                <i class="fa-solid fa-toolbox about-icon"></i>
+                <h3>Toolbox</h3>
+                <p class="about-version">Version 0.1.0</p>
+                <p>A cross-platform CLI + Web UI for managing multiple Git repositories.</p>
+                <p>
+                    <a href="https://github.com/narra-antonio/toolbox" target="_blank">
+                        <i class="fa-brands fa-github"></i> github.com/narra-antonio/toolbox
+                    </a>
+                </p>
+                <p class="about-author">Made with <i class="fa-solid fa-heart"></i> by Antonio Narra</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

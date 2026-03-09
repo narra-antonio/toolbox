@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Toolbox{% endblock %}
+
+{% block breadcrumb %}
+    <span class="separator">/</span>
+    <span>Dashboard</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Overview of your Git repositories and incoming commits.</p>
+</div>
+
+<div id="repoList">
+    <div class="loading-state">
+        <i class="fa-solid fa-spinner fa-spin"></i> Loading repositories...
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const Dashboard = {
+    async init() {
+        await this.loadProjects();
+    },
+
+    async loadProjects() {
+        const container = document.getElementById('repoList');
+        try {
+            const projects = await Api.get('/api/projects');
+            if (projects.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <p>No repositories configured.</p>
+                        <p class="text-muted">Run <code>toolbox config init &lt;root&gt;</code> to get started.</p>
+                    </div>`;
+                return;
+            }
+            container.innerHTML = projects.map(p => this.renderProjectCard(p)).join('');
+            projects.forEach(p => this.loadCommits(p.id));
+        } catch (e) {
+            container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation text-danger"></i><p>Failed to load repositories.</p></div>`;
+        }
+    },
+
+    renderProjectCard(project) {
+        return `
+        <div class="card" id="project-${project.id}">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-brands fa-git-alt text-warning"></i>
+                    ${project.alias}
+                    <span class="badge badge-info">${project.default_branch}</span>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="Dashboard.pull(${project.id})" id="pull-btn-${project.id}">
+                    <i class="fa-solid fa-arrow-down"></i> Pull
+                </button>
+            </div>
+            <p class="text-muted" style="font-size:12px; margin-bottom:12px;">
+                <i class="fa-solid fa-folder"></i> ${project.path}
+            </p>
+            <div id="commits-${project.id}">
+                <span class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Fetching commits...</span>
+            </div>
+        </div>`;
+    },
+
+    async loadCommits(projectId) {
+        const container = document.getElementById(`commits-${projectId}`);
+        try {
+            const data = await Api.get(`/api/projects/${projectId}/commits`);
+            let html = '';
+
+            if (data.deleted_remote_branches?.length > 0) {
+                html += `
+                <div class="alert-warning mb-4">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Branches no longer in remote: <strong>${data.deleted_remote_branches.join(', ')}</strong>
+                </div>`;
+            }
+
+            const branches = Object.entries(data.incoming_commits || {});
+            if (branches.length === 0) {
+                html += `<p class="text-muted"><i class="fa-solid fa-circle-check text-success"></i> Up to date</p>`;
+            } else {
+                html += branches.map(([branch, commits]) => `
+                <div class="branch-commits">
+                    <div class="branch-label">
+                        <i class="fa-solid fa-code-branch"></i> ${branch}
+                        <span class="badge badge-warning">${commits.length} incoming</span>
+                    </div>
+                    <div class="commit-list">
+                        ${commits.map(c => `
+                        <div class="commit-item">
+                            <code class="commit-hash">${c.hash}</code>
+                            <span class="commit-message">${c.message}</span>
+                            <span class="commit-meta">${c.author} · ${this.formatDate(c.date)}</span>
+                        </div>`).join('')}
+                    </div>
+                </div>`).join('');
+            }
+
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = `<p class="text-danger"><i class="fa-solid fa-circle-xmark"></i> Failed to fetch commits</p>`;
+        }
+    },
+
+    async pull(projectId) {
+        const btn = document.getElementById(`pull-btn-${projectId}`);
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Pulling...';
+        try {
+            const result = await Api.post(`/api/projects/${projectId}/pull`);
+            if (result.status === 'skipped') {
+                Toast.warning(`Skipped: ${result.reason}`);
+            } else if (result.status === 'error') {
+                Toast.error(`Error: ${result.reason}`);
+            } else {
+                Toast.success('Pull completed successfully!');
+                await this.loadCommits(projectId);
+            }
+        } catch (e) {
+            Toast.error('Pull failed.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-arrow-down"></i> Pull';
+        }
+    },
+
+    formatDate(iso) {
+        const d = new Date(iso);
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => Dashboard.init());
+</script>
+{% endblock %}

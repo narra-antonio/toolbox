@@ -11,7 +11,7 @@ class Database:
         self._connection: sqlite3.Connection | None = None
 
     def __enter__(self):
-        self._connection = sqlite3.connect(self.db_path)
+        self._connection = sqlite3.connect(self.db_path, check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA foreign_keys = ON")
         return self
@@ -45,6 +45,14 @@ class Database:
                 credential_id  INTEGER,
                 FOREIGN KEY (credential_id) REFERENCES credentials(id) ON DELETE SET NULL
             );
+
+            CREATE TABLE IF NOT EXISTS settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+
+            INSERT OR IGNORE INTO settings (key, value) VALUES ('web_port', '5000');
+            INSERT OR IGNORE INTO settings (key, value) VALUES ('web_host', '127.0.0.1');
         """)
 
     @property

@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: toolbox-macos
+            artifact_ext: dmg
+          - os: ubuntu-latest
+            artifact_name: toolbox-linux
+            artifact_ext: bin
+          - os: windows-latest
+            artifact_name: toolbox-windows
+            artifact_ext: exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip install pyinstaller
+
+      - name: Install create-dmg (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: brew install create-dmg
+
+      - name: Build executable
+        run: |
+          pyinstaller \
+            --onefile \
+            --name toolbox \
+            --add-data "toolbox/web/templates:toolbox/web/templates" \
+            --add-data "toolbox/web/static:toolbox/web/static" \
+            toolbox/cli/app.py
+
+      - name: Package dmg (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: |
+          mkdir -p dist/dmg
+          create-dmg \
+            --volname "Toolbox" \
+            --window-size 540 380 \
+            --icon-size 128 \
+            --app-drop-link 380 180 \
+            "dist/toolbox-macos.dmg" \
+            "dist/toolbox"
+
+      - name: Rename artifact (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: mv dist/toolbox dist/toolbox-linux.bin
+
+      - name: Rename artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        run: mv dist/toolbox.exe dist/toolbox-windows.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact_name }}.${{ matrix.artifact_ext }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true

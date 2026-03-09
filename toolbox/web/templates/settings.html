@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — Toolbox{% endblock %}
+
+{% block breadcrumb %}
+    <span class="separator">/</span>
+    <span>Settings</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Settings</h1>
+    <p class="page-subtitle">Manage repositories, credentials and application settings.</p>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab active" data-tab="repositories">
+        <i class="fa-solid fa-folder"></i> Repositories
+    </button>
+    <button class="tab" data-tab="credentials">
+        <i class="fa-solid fa-key"></i> Credentials
+    </button>
+    <button class="tab" data-tab="general">
+        <i class="fa-solid fa-sliders"></i> General
+    </button>
+</div>
+
+<!-- Repositories Tab -->
+<div class="tab-content active" id="tab-repositories">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title"><i class="fa-solid fa-folder"></i> Repositories</div>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alias</th>
+                        <th>Path</th>
+                        <th>Default Branch</th>
+                        <th>Credential</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="repoTableBody">
+                    <tr><td colspan="5" class="text-muted">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Credentials Tab -->
+<div class="tab-content" id="tab-credentials">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title"><i class="fa-solid fa-key"></i> Credentials</div>
+            <button class="btn btn-primary" onclick="SettingsPage.openCredentialModal()">
+                <i class="fa-solid fa-plus"></i> Add
+            </button>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alias</th>
+                        <th>Host</th>
+                        <th>Type</th>
+                        <th>Key / Username</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="credTableBody">
+                    <tr><td colspan="5" class="text-muted">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- General Tab -->
+<div class="tab-content" id="tab-general">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title"><i class="fa-solid fa-sliders"></i> General</div>
+        </div>
+        <div id="generalForm">
+            <div class="form-group">
+                <label>Web Host</label>
+                <input type="text" id="setting-web_host" placeholder="127.0.0.1">
+            </div>
+            <div class="form-group">
+                <label>Web Port</label>
+                <input type="number" id="setting-web_port" placeholder="5000">
+            </div>
+            <div class="form-group">
+                <label>UI Theme</label>
+                <select id="setting-ui_theme">
+                    <option value="system">System</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="SettingsPage.saveGeneralSettings()">
+                <i class="fa-solid fa-floppy-disk"></i> Save
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Repository Modal -->
+<div class="modal-overlay" id="repoModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-folder"></i> Edit Repository</h2>
+            <button class="modal-close" data-modal="repoModal"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="repoModalId">
+            <div class="form-group">
+                <label>Alias</label>
+                <input type="text" id="repoModalAlias">
+            </div>
+            <div class="form-group">
+                <label>Default Branch</label>
+                <input type="text" id="repoModalBranch">
+            </div>
+            <div class="form-group">
+                <label>Credential</label>
+                <select id="repoModalCredential">
+                    <option value="">— None —</option>
+                </select>
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button class="btn btn-primary w-full" onclick="SettingsPage.saveRepo()">
+                    <i class="fa-solid fa-floppy-disk"></i> Save
+                </button>
+                <button class="btn btn-danger" onclick="SettingsPage.deleteRepo()">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Credential Modal -->
+<div class="modal-overlay" id="credModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-key"></i> <span id="credModalTitle">Add Credential</span></h2>
+            <button class="modal-close" data-modal="credModal"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="credModalId">
+            <div class="form-group">
+                <label>Alias</label>
+                <input type="text" id="credModalAlias" placeholder="e.g. github-narra">
+            </div>
+            <div class="form-group">
+                <label>Host</label>
+                <input type="text" id="credModalHost" placeholder="e.g. github.com">
+            </div>
+            <div class="form-group">
+                <label>Auth Type</label>
+                <select id="credModalType" onchange="SettingsPage.toggleCredFields()">
+                    <option value="ssh">SSH</option>
+                    <option value="https">HTTPS</option>
+                </select>
+            </div>
+            <div id="sshField" class="form-group">
+                <label>SSH Key Path</label>
+                <input type="text" id="credModalSshKey" placeholder="e.g. ~/.ssh/id_rsa_narra">
+            </div>
+            <div id="httpsField" class="form-group" style="display:none;">
+                <label>Username</label>
+                <input type="text" id="credModalUsername" placeholder="e.g. narra-antonio">
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button class="btn btn-primary w-full" onclick="SettingsPage.saveCredential()">
+                    <i class="fa-solid fa-floppy-disk"></i> Save
+                </button>
+                <button class="btn btn-danger" id="credDeleteBtn" onclick="SettingsPage.deleteCredential()" style="display:none;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SettingsPage = {
+    credentials: [],
+
+    async init() {
+        await Promise.all([
+            this.loadRepos(),
+            this.loadCredentials(),
+            this.loadGeneralSettings()
+        ]);
+        this.initTabs();
+    },
+
+    initTabs() {
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+            });
+        });
+    },
+
+    // ── Repositories ────────────────────────────────────────────
+
+    async loadRepos() {
+        const [projects, credentials] = await Promise.all([
+            Api.get('/api/projects'),
+            Api.get('/api/credentials')
+        ]);
+        this.credentials = credentials;
+        const credMap = Object.fromEntries(credentials.map(c => [c.id, c.alias]));
+        const tbody = document.getElementById('repoTableBody');
+        if (projects.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No repositories configured.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = projects.map(p => `
+            <tr>
+                <td><strong>${p.alias}</strong></td>
+                <td class="text-muted" style="font-size:12px;">${p.path}</td>
+                <td><span class="badge badge-info">${p.default_branch}</span></td>
+                <td>${p.credential_id ? `<span class="badge badge-success">${credMap[p.credential_id] || '—'}</span>` : '<span class="text-muted">—</span>'}</td>
+                <td><button class="btn btn-ghost btn-sm" onclick="SettingsPage.openRepoModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                    <i class="fa-solid fa-pen"></i>
+                </button></td>
+            </tr>`).join('');
+    },
+
+    openRepoModal(project) {
+        document.getElementById('repoModalId').value = project.id;
+        document.getElementById('repoModalAlias').value = project.alias;
+        document.getElementById('repoModalBranch').value = project.default_branch;
+        const select = document.getElementById('repoModalCredential');
+        select.innerHTML = '<option value="">— None —</option>' +
+            this.credentials.map(c => `<option value="${c.id}" ${c.id == project.credential_id ? 'selected' : ''}>${c.alias}</option>`).join('');
+        Modal.open('repoModal');
+    },
+
+    async saveRepo() {
+        const id = document.getElementById('repoModalId').value;
+        await Api.put(`/api/projects/${id}`, {
+            alias: document.getElementById('repoModalAlias').value,
+            default_branch: document.getElementById('repoModalBranch').value,
+            credential_id: document.getElementById('repoModalCredential').value || null
+        });
+        Modal.close('repoModal');
+        Toast.success('Repository updated.');
+        await this.loadRepos();
+    },
+
+    async deleteRepo() {
+        const id = document.getElementById('repoModalId').value;
+        if (!confirm('Remove this repository from Toolbox?')) return;
+        await Api.delete(`/api/projects/${id}`);
+        Modal.close('repoModal');
+        Toast.success('Repository removed.');
+        await this.loadRepos();
+    },
+
+    // ── Credentials ─────────────────────────────────────────────
+
+    async loadCredentials() {
+        const credentials = await Api.get('/api/credentials');
+        this.credentials = credentials;
+        const tbody = document.getElementById('credTableBody');
+        if (credentials.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No credentials configured.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = credentials.map(c => `
+            <tr>
+                <td><strong>${c.alias}</strong></td>
+                <td>${c.host}</td>
+                <td><span class="badge ${c.auth_type === 'ssh' ? 'badge-info' : 'badge-warning'}">${c.auth_type.toUpperCase()}</span></td>
+                <td class="text-muted" style="font-size:12px;">${c.ssh_key_path || c.username || '—'}</td>
+                <td><button class="btn btn-ghost btn-sm" onclick="SettingsPage.openCredentialModal(${JSON.stringify(c).replace(/"/g, '&quot;')})">
+                    <i class="fa-solid fa-pen"></i>
+                </button></td>
+            </tr>`).join('');
+    },
+
+    openCredentialModal(credential = null) {
+        document.getElementById('credModalId').value = credential?.id || '';
+        document.getElementById('credModalAlias').value = credential?.alias || '';
+        document.getElementById('credModalHost').value = credential?.host || '';
+        document.getElementById('credModalType').value = credential?.auth_type || 'ssh';
+        document.getElementById('credModalSshKey').value = credential?.ssh_key_path || '';
+        document.getElementById('credModalUsername').value = credential?.username || '';
+        document.getElementById('credModalTitle').textContent = credential ? 'Edit Credential' : 'Add Credential';
+        document.getElementById('credDeleteBtn').style.display = credential ? 'inline-flex' : 'none';
+        this.toggleCredFields();
+        Modal.open('credModal');
+    },
+
+    toggleCredFields() {
+        const type = document.getElementById('credModalType').value;
+        document.getElementById('sshField').style.display = type === 'ssh' ? 'block' : 'none';
+        document.getElementById('httpsField').style.display = type === 'https' ? 'block' : 'none';
+    },
+
+    async saveCredential() {
+        const id = document.getElementById('credModalId').value;
+        const data = {
+            alias: document.getElementById('credModalAlias').value,
+            host: document.getElementById('credModalHost').value,
+            auth_type: document.getElementById('credModalType').value,
+            ssh_key_path: document.getElementById('credModalSshKey').value || null,
+            username: document.getElementById('credModalUsername').value || null
+        };
+        if (id) {
+            await Api.put(`/api/credentials/${id}`, data);
+            Toast.success('Credential updated.');
+        } else {
+            await Api.post('/api/credentials', data);
+            Toast.success('Credential added.');
+        }
+        Modal.close('credModal');
+        await this.loadCredentials();
+    },
+
+    async deleteCredential() {
+        const id = document.getElementById('credModalId').value;
+        if (!confirm('Delete this credential?')) return;
+        await Api.delete(`/api/credentials/${id}`);
+        Modal.close('credModal');
+        Toast.success('Credential deleted.');
+        await this.loadCredentials();
+    },
+
+    // ── General Settings ─────────────────────────────────────────
+
+    async loadGeneralSettings() {
+        const settings = await Api.get('/api/settings');
+        Object.entries(settings).forEach(([key, value]) => {
+            const el = document.getElementById(`setting-${key}`);
+            if (el) el.value = value;
+        });
+    },
+
+    async saveGeneralSettings() {
+        const data = {
+            web_host: document.getElementById('setting-web_host').value,
+            web_port: document.getElementById('setting-web_port').value,
+            ui_theme: document.getElementById('setting-ui_theme').value
+        };
+        await Api.put('/api/settings', data);
+        ThemeManager.apply(data.ui_theme);
+        Toast.success('Settings saved.');
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => SettingsPage.init());
+</script>
+{% endblock %}
